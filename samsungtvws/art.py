@@ -86,11 +86,11 @@ class SamsungTVArt(SamsungTVWSConnection):
             raise exceptions.ConnectionFailure(response)
 
         return self.connection
-        
+
     def get_uuid(self):
         self.art_uuid = str(uuid.uuid4())
         return self.art_uuid
-        
+
     def get_websocket_message(self):
         try:
             raw_data = self.connection.recv()
@@ -103,7 +103,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         except websocket.WebSocketTimeoutException as e:
             raise exceptions.TimeoutError('Websocket Time out: {}'.format(e))
         return {}
-        
+
     def wait_for_response(self, wait_for_event, request_uuid=None):
         while True:
             data = self.get_websocket_message()
@@ -128,7 +128,7 @@ class SamsungTVArt(SamsungTVWSConnection):
     ) -> Optional[Dict[str, Any]]:
         if not request_data.get("id"):
             request_data["id"] = self.get_uuid()            #old api
-        request_data["request_id"] = request_data["id"]     #new api  
+        request_data["request_id"] = request_data["id"]     #new api
         self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
         return self.wait_for_response(wait_for_event, request_data["id"])
 
@@ -175,7 +175,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         return data
-        
+
     def set_favourite(self, content_id, status='on'):
         data = self._send_art_request(
             {   "request": "change_favorite",
@@ -185,7 +185,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         return data
-        
+
     def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
@@ -206,7 +206,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         return data
- 
+
     def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
@@ -254,7 +254,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         return data
-        
+
     def get_color_temperature(self):
         try:
             data = self.get_artmode_settings('color_temperature')
@@ -271,7 +271,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
         assert data
         return data
- 
+
     def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
             content_id_list=[content_id_list]
@@ -350,7 +350,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             file_type = file_extension[1:]
             with open(file, 'rb') as f:
                 file = f.read()
-                
+
         file_size = len(file)
         file_type = file_type.lower()
         if file_type == "jpeg":
@@ -392,7 +392,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
 
         art_socket_raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get('secured', False) else art_socket_raw  
+        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get('secured', False) else art_socket_raw
         art_socket.connect((conn_info["ip"], int(conn_info["port"])))
         art_socket.send(len(header).to_bytes(4, "big"))
         art_socket.send(header.encode("ascii"))
@@ -442,7 +442,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                 "value": mode,
             }
         )
-        
+
     def get_rotation(self):
         data = self._send_art_request(
             {"request": "get_current_rotation"}
