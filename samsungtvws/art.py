@@ -4,19 +4,22 @@ SamsungTVWS - Samsung Smart TV WS API wrapper
 Copyright (C) 2019 DSR! <xchwarze@gmail.com>
 Copyright (C) 2021 Matthew Garrett <mjg59@srcf.ucam.org>
 Copyright (C) 2024 Nick Waterton <n.waterton@outlook.com>
+Copyright (C) 2025 Ed Leafe <ed@leafe.com>
 
 SPDX-License-Identifier: LGPL-3.0
 """
 
 from datetime import datetime
-import os
 import json
 import logging
 import random
+from pathlib import Path
 import socket
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlparse
 import uuid
 
+import requests
 import websocket
 
 from . import exceptions, helper
@@ -29,6 +32,7 @@ from .helper import get_ssl_context
 _LOGGING = logging.getLogger(__name__)
 
 ART_ENDPOINT = "com.samsung.art-app"
+CHUNK_SIZE = 64 * 1024 # 64K seems to work well
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -344,14 +348,79 @@ class SamsungTVArt(SamsungTVWSConnection):
 
         return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
 
-    def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None):
-        if isinstance(file, str):
-            file_name, file_extension = os.path.splitext(file)
-            file_type = file_extension[1:]
-            with open(file, 'rb') as f:
-                file = f.read()
 
-        file_size = len(file)
+    @staticmethod
+    def bytes_chunker(data):
+        """Return the bytes in CHUNK_SIZE pieces"""
+        pos = 0
+        total = len(data)
+        while pos < total:
+            end = pos + CHUNK_SIZE
+            yield data[pos: end]
+            pos = end
+
+    @staticmethod
+    def stream_chunker(url):
+        """Stream the image, yielding CHUNK_SIZE pieces"""
+        with requests.get(url, stream=True) as response:
+            response.raise_for_status()
+            for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                if chunk:  # filter out keep-alive chunks
+                    yield chunk
+
+    @staticmethod
+    def file_chunker(pth):
+        """Read the image file, yielding CHUNK_SIZE pieces"""
+        with open(pth, "rb") as f:
+            content = f.read(CHUNK_SIZE)
+            if content:
+                yield content
+            else:
+                # EOF
+                return
+
+    def upload(
+            self,
+            image,
+            matte="shadowbox_polar",
+            portrait_matte="shadowbox_polar",
+            file_type="png",
+            date=None
+    ):
+        """
+        Handle uploading images from different source types.
+
+        An image can be one of:
+            a) a file path to an image on the local disk
+            b) a url for an image on the web
+            c) a series of bytes being directly passed to this method
+
+        Both a) and b) will be passed as strings, so we use urlparse to see if it has a scheme,
+        which makes it a URL.
+
+        High quality images will be large, and reading them into memory can be inefficient, so we
+        define several methods above to yield their contents in CHUNK_SIZE pieces.
+        """
+        if isinstance(image, str):
+            pth = Path(image)
+            file_name = pth.stem
+            file_type = pth.suffix[1:]
+
+            # Check if the string is a URL for a remote image file
+            url_parts = urlparse(image)
+            if url_parts.scheme:
+                resp = requests.head(image)
+                file_size = resp.headers.get("Content-Length")
+                chunker = self.stream_chunker
+            else:
+                # It must be a file path
+                file_size = pth.stat().st_size
+                chunker = self.file_chunker
+        else:
+            # Received the raw bytes for an image. `file_type` must be passed if it is not `.png`
+            file_size = len(image)
+            chunker = self.bytes_chunker
+
         file_type = file_type.lower()
         if file_type == "jpeg":
             file_type = "jpg"
@@ -371,8 +440,8 @@ class SamsungTVArt(SamsungTVWSConnection):
                     "id": self.art_uuid,
                 },
                 "image_date": date,
-                "matte_id": matte or 'none',
-                "portrait_matte_id": portrait_matte or 'none',
+                "matte_id": matte or "none",
+                "portrait_matte_id": portrait_matte or "none",
                 "file_size": file_size,
             },
             wait_for_event="ready_to_use"
@@ -392,12 +461,13 @@ class SamsungTVArt(SamsungTVWSConnection):
         )
 
         art_socket_raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get('secured', False) else art_socket_raw
+        art_socket = get_ssl_context().wrap_socket(art_socket_raw) if conn_info.get("secured", False) else art_socket_raw
         art_socket.connect((conn_info["ip"], int(conn_info["port"])))
         art_socket.send(len(header).to_bytes(4, "big"))
         art_socket.send(header.encode("ascii"))
-        art_socket.send(file)
-        #_LOGGING.info('sending: header length: {}, header: {}'.format(len(header).to_bytes(4, "big").hex(), header.encode("ascii")))
+        # Send the image contents in chunks
+        for chunk in chunker(image):
+            art_socket.send(chunk)
 
         data = self.wait_for_response("image_added")
         return data["content_id"] if data else None
