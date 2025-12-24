@@ -154,9 +154,10 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             data = json.loads(response["data"])
             sub_event = data.get("event", "*")
             if 'artmode_status' in sub_event:
-                self.art_mode = data['value'] == 'on'
+                # API 5.x may use 'status' instead of 'value'
+                self.art_mode = data.get('value', data.get('status', 'off')) == 'on'
             elif sub_event == 'art_mode_changed':
-                self.art_mode = data['status'] == 'on'
+                self.art_mode = data.get('status', 'off') == 'on'
             elif sub_event == 'go_to_standby':
                 self.art_mode = False
             elif 'wakeup' in sub_event:
