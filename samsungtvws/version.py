@@ -8,5 +8,6 @@
 # version 3.0.2 N Waterton 11th March 2025 - changed image compare function in async_update_from_directory.py, updated README and setup.py
 # version 3.0.3 N Waterton 24th march 2025 added asyncio.Lock to '_get_device_info' in async_art.py updated web_interface to fully async.
 # version 3.0.4 E Leafe 18th november 2025 added uploading images from urls, and uploading in chunks to reduce memory loads
+# version 3.0.5 E Leafe 19th february 2026 updated async_art.py with the url features added in 3.0.4
 
-__version__ = '3.0.4'
+__version__ = '3.0.5'

@@ -12,10 +12,12 @@ from datetime import datetime
 import os
 import json
 import logging
+from pathlib import Path
 import random
 import asyncio
 import aiohttp
 from typing import Any, Dict, List, Optional, Union, Callable, Awaitable
+from urllib.parse import urlparse
 import uuid
 
 from . import exceptions, helper
@@ -29,6 +31,7 @@ from .helper import get_ssl_context
 _LOGGING = logging.getLogger(__name__)
 
 ART_ENDPOINT = "com.samsung.art-app"
+CHUNK_SIZE = 64 * 1024  # 64K seems to work well
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -149,9 +152,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return await self.wait_for_response(wait_for_event or request_data["id"], timeout)
         
     async def process_event(self, event=None, response=None):
+        _LOGGING.debug("process_event: event=%s, pending=%s", event, list(self.pending_requests.keys()))
         if event == D2D_SERVICE_MESSAGE_EVENT:
             data = json.loads(response["data"])
             sub_event = data.get("event", "*")
+            request_id = data.get('request_id', data.get('id'))
+            _LOGGING.debug("d2d message: sub_event=%s, request_id=%s", sub_event, request_id)
             if 'artmode_status' in sub_event:
                 self.art_mode = data['value'] == 'on'
             elif sub_event == 'art_mode_changed':
@@ -414,23 +420,82 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             thumbnail_data_dict[filename] = thumbnail_data
         return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
 
-    async def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=10):
-        '''
-        NOTE: both id's and request_id have to be the same
-        '''
-        if isinstance(file, str):
-            file_name, file_extension = os.path.splitext(file)
-            file_type = file_extension[1:]
-            with open(file, 'rb') as f:
-                file = f.read()
-                
-        file_size = len(file)
+    @staticmethod
+    async def bytes_chunker(data):
+        """Return the bytes in CHUNK_SIZE pieces"""
+        pos = 0
+        total = len(data)
+        while pos < total:
+            end = pos + CHUNK_SIZE
+            yield data[pos: end]
+            pos = end
+
+    @staticmethod
+    async def stream_chunker(url):
+        """Stream the image from a URL, yielding CHUNK_SIZE pieces"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                async for chunk in response.content.iter_chunked(CHUNK_SIZE):
+                    if chunk:
+                        yield chunk
+
+    @staticmethod
+    async def file_chunker(pth):
+        """Read the image file, yielding CHUNK_SIZE pieces"""
+        with open(pth, "rb") as f:
+            while True:
+                content = f.read(CHUNK_SIZE)
+                if content:
+                    yield content
+                else:
+                    return
+
+    async def upload(self, image, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=10):
+        """
+        Handle uploading images from different source types.
+
+        An image can be one of:
+            a) a file path to an image on the local disk
+            b) a url for an image on the web
+            c) a series of bytes being directly passed to this method
+
+        Both a) and b) will be passed as strings, so we use urlparse to see if it has a scheme,
+        which makes it a URL.
+
+        High quality images will be large, and reading them into memory can be inefficient, so we
+        define several methods above to yield their contents in CHUNK_SIZE pieces.
+        """
+        if isinstance(image, str):
+            pth = Path(image)
+            file_name = pth.stem
+            file_type = pth.suffix[1:]
+
+            # Check if the string is a URL for a remote image file
+            url_parts = urlparse(image)
+            if url_parts.scheme:
+                async with aiohttp.ClientSession() as session:
+                    async with session.head(image) as resp:
+                        file_size = int(resp.headers.get("Content-Length", 0))
+                chunker = self.stream_chunker
+            else:
+                # It must be a file path
+                file_size = pth.stat().st_size
+                chunker = self.file_chunker
+        else:
+            # Received the raw bytes for an image. `file_type` must be passed if it is not `.png`
+            file_size = len(image)
+            chunker = self.bytes_chunker
+
         file_type = file_type.lower()
         if file_type == "jpeg":
             file_type = "jpg"
-            
+
         if date is None:
             date = datetime.now().strftime("%Y:%m:%d %H:%M:%S")
+
+        _LOGGING.debug("upload: file_type=%s, file_size=%s, listener_alive=%s",
+                       file_type, file_size, self._recv_loop is not None and not self._recv_loop.done())
         data = await self._send_art_request(
             {
                 "request": "send_image",
@@ -446,9 +511,15 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "matte_id": matte or 'none',
                 "portrait_matte_id": portrait_matte or 'none',
                 "file_size": file_size,
-            }
+            },
+            wait_for_event="ready_to_use",
+            timeout=timeout
         )
-        assert data
+        if not data:
+            _LOGGING.error("upload: send_image request timed out (no 'ready_to_use' response in %ss). "
+                           "listener_alive=%s, connection_alive=%s",
+                           timeout, self._recv_loop is not None and not self._recv_loop.done(), self.is_alive())
+            raise exceptions.ConnectionFailure("TV did not respond to send_image request")
         conn_info = json.loads(data["conn_info"])
         header = json.dumps(
             {
@@ -463,10 +534,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
 
         ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)  
+        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
         writer.write(len(header).to_bytes(4, "big"))
         writer.write(header.encode("ascii"))
-        writer.write(file)
+        # Send the image contents in chunks
+        async for chunk in chunker(image):
+            writer.write(chunk)
         await writer.drain()
         writer.close()
         data = await self.wait_for_response("image_added", timeout=timeout)
