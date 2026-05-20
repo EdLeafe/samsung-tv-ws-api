@@ -16,6 +16,7 @@ from . import async_connection, remote, rest
 from .event import ED_INSTALLED_APP_EVENT, parse_installed_app
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 
 class SamsungTVWSAsyncRemote(async_connection.SamsungTVWSAsyncConnection):

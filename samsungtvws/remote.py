@@ -17,6 +17,7 @@ from . import art, connection, helper, rest, shortcuts
 from .command import SamsungTVCommand, SamsungTVSleepCommand
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 REMOTE_ENDPOINT = "samsung.remote.control"
 

@@ -14,6 +14,7 @@ import requests
 from . import connection, exceptions, helper
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 
 class SamsungTVRest(connection.SamsungTVWSBaseConnection):

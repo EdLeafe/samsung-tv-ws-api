@@ -15,6 +15,7 @@ from typing import Any, Dict, Optional, Union
 from . import exceptions
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 _SSL_CONTEXT: Optional[ssl.SSLContext] = None
 
 

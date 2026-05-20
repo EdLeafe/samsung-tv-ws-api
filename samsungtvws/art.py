@@ -30,6 +30,7 @@ from .rest import SamsungTVRest
 from .helper import get_ssl_context
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 ART_ENDPOINT = "com.samsung.art-app"
 CHUNK_SIZE = 64 * 1024 # 64K seems to work well
