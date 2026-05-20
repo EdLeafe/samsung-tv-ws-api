@@ -27,6 +27,7 @@ from .event import (
 from .version import __version__
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 
 class SamsungTVWSBaseConnection:
