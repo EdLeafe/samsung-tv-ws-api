@@ -8,9 +8,7 @@ from samsungtvws import SamsungTVWS, __version__, exceptions
 def parseargs():
     # Add command line argument parsing
     parser = argparse.ArgumentParser(
-        description="Example art Samsung Frame TV Version: {}".format(
-            __version__
-        )
+        description="Example art Samsung Frame TV Version: {}".format(__version__)
     )
     parser.add_argument(
         "ip",
@@ -96,9 +94,7 @@ class Slideshow:
             next_id = self.sequence[new_index]
             # Select new image
             self.tv.art().select_image(next_id)
-            self.log.info(
-                f"Advanced from {self.sequence[self.index]} to {next_id}"
-            )
+            self.log.info(f"Advanced from {self.sequence[self.index]} to {next_id}")
             self.index = new_index
             return True
         except Exception as e:

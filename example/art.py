@@ -12,9 +12,7 @@ from samsungtvws import SamsungTVWS, __version__, exceptions
 def parseargs():
     # Add command line argument parsing
     parser = argparse.ArgumentParser(
-        description="Example art Samsung Frame TV Version: {}".format(
-            __version__
-        )
+        description="Example art Samsung Frame TV Version: {}".format(__version__)
     )
     parser.add_argument(
         "ip",
@@ -149,9 +147,7 @@ def main():
                 content_id = os.path.splitext(content_id)[
                     0
                 ]  # remove file extension if any (eg .jpg)
-                logging.info(
-                    "uploaded {} to tv as {}".format(filename, content_id)
-                )
+                logging.info("uploaded {} to tv as {}".format(filename, content_id))
 
             # delete art on tv
             if content_id:
@@ -159,9 +155,7 @@ def main():
                 if result:
                     logging.info("deleted from tv: {}".format([content_id]))
                 else:
-                    logging.warning(
-                        "FAILED to delete from tv: {}".format([content_id])
-                    )
+                    logging.warning("FAILED to delete from tv: {}".format([content_id]))
 
 
 main()

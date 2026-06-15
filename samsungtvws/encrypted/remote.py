@@ -104,9 +104,7 @@ class SamsungTVEncryptedWSAsyncRemote:
         step4_url = self._format_rest_url(f"socket.io/1/?t={millis}")
         LOGGER.debug("Tx: GET %s", step4_url)
 
-        async with self._web_session.get(
-            step4_url, timeout=self._timeout
-        ) as response:
+        async with self._web_session.get(step4_url, timeout=self._timeout) as response:
             LOGGER.debug("Rx: %s", await response.text())
             step4_response = await response.text()
 
@@ -157,15 +155,9 @@ class SamsungTVEncryptedWSAsyncRemote:
             await self._open()
             assert self._connection
 
-        delay = (
-            self._key_press_delay
-            if key_press_delay is None
-            else key_press_delay
-        )
+        delay = self._key_press_delay if key_press_delay is None else key_press_delay
         for command in commands:
-            await self._send_command(
-                self._connection, command, self._session, delay
-            )
+            await self._send_command(self._connection, command, self._session, delay)
 
     @staticmethod
     async def _send_command(
@@ -174,14 +166,10 @@ class SamsungTVEncryptedWSAsyncRemote:
         session: SamsungTVEncryptedSession,
         delay: float,
     ) -> None:
-        LOGGER.debug(
-            "SamsungTVEncryptedWS websocket command: %s", command.as_dict()
-        )
+        LOGGER.debug("SamsungTVEncryptedWS websocket command: %s", command.as_dict())
         payload = session.encrypt_command(command)
 
-        LOGGER.debug(
-            "SamsungTVEncryptedWS websocket command (encrypted): %s", payload
-        )
+        LOGGER.debug("SamsungTVEncryptedWS websocket command (encrypted): %s", payload)
         await connection.send(payload)
 
         await asyncio.sleep(delay)
@@ -197,6 +185,5 @@ class SamsungTVEncryptedWSAsyncRemote:
 
     def is_alive(self) -> bool:
         return (
-            self._connection is not None
-            and self.connection.state is not State.CLOSED
+            self._connection is not None and self.connection.state is not State.CLOSED
         )

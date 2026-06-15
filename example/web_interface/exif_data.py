@@ -60,9 +60,7 @@ class ExifData:
                 self.update_exif_dict(file)
             # run as task because of rate limiting
             if not self.gps_task or self.gps_task.done():
-                self.gps_task = asyncio.create_task(
-                    self.update_addresses(image_names)
-                )
+                self.gps_task = asyncio.create_task(self.update_addresses(image_names))
 
     def load_data(self):
         try:
@@ -124,10 +122,7 @@ class ExifData:
                 "{}: GPS info:\r\n{}".format(
                     file,
                     pformat(
-                        {
-                            "{}({})".format(GPSTAGS[k], k): v
-                            for k, v in gpsinfo.items()
-                        }
+                        {"{}({})".format(GPSTAGS[k], k): v for k, v in gpsinfo.items()}
                     ),
                 )
             )

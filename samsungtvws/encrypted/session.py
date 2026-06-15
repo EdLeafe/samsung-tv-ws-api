@@ -13,9 +13,9 @@ class Padding:
 
     @staticmethod
     def pad(text: str) -> str:
-        return text + (
+        return text + (Padding.BLOCK_SIZE - len(text) % Padding.BLOCK_SIZE) * chr(
             Padding.BLOCK_SIZE - len(text) % Padding.BLOCK_SIZE
-        ) * chr(Padding.BLOCK_SIZE - len(text) % Padding.BLOCK_SIZE)
+        )
 
     @staticmethod
     def unpad(text: bytes) -> str:

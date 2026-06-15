@@ -31,11 +31,7 @@ class SamsungTVSleepCommand(SamsungTVCommand):
         self.delay = delay
 
     def as_dict(self) -> Dict[str, Any]:
-        raise NotImplementedError(
-            "Cannot use as_dict on SamsungTVSleepCommand"
-        )
+        raise NotImplementedError("Cannot use as_dict on SamsungTVSleepCommand")
 
     def get_payload(self) -> str:
-        raise NotImplementedError(
-            "Cannot use get_payload on SamsungTVSleepCommand"
-        )
+        raise NotImplementedError("Cannot use get_payload on SamsungTVSleepCommand")

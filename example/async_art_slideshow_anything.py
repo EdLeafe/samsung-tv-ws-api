@@ -112,21 +112,15 @@ class slideshow:
         type=artDataMixin,
     )
 
-    def __init__(
-        self, ip, folder, period=60, random_update=1440, token_file=None
-    ):
+    def __init__(self, ip, folder, period=60, random_update=1440, token_file=None):
         self.log = logging.getLogger("Main." + __class__.__name__)
         self.debug = self.log.getEffectiveLevel() <= logging.DEBUG
         self.ip = ip
-        self.random_update = (
-            max(0.25, random_update) * 60
-        )  # convert minutes to seconds
+        self.random_update = max(0.25, random_update) * 60  # convert minutes to seconds
         self.period = int(min(60, self.random_update)) if period else 0
         # Autosave token to file
         self.token_file = (
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), token_file
-            )
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), token_file)
             if token_file
             else token_file
         )
@@ -139,9 +133,7 @@ class slideshow:
         )
         self.api_version = 1
         self.start = time.time()
-        self.tv = SamsungTVAsyncArt(
-            host=self.ip, port=8002, token_file=self.token_file
-        )
+        self.tv = SamsungTVAsyncArt(host=self.ip, port=8002, token_file=self.token_file)
 
         self.log.info(
             "check thumbnails {}, slideshow rotation every: {}".format(
@@ -179,8 +171,7 @@ class slideshow:
         result = []
         try:
             result = [
-                v["content_id"]
-                for v in await self.tv.available(category, timeout=10)
+                v["content_id"] for v in await self.tv.available(category, timeout=10)
             ]
         except AssertionError:
             pass
@@ -228,18 +219,14 @@ class slideshow:
     def get_filename(self, content_id, cat):
         return next(
             iter(
-                f
-                for f in self.get_files(cat)
-                if self.get_content_ids(f) == content_id
+                f for f in self.get_files(cat) if self.get_content_ids(f) == content_id
             ),
             None,
         )
 
     def get_last_updated(self, filename):
         if filename:
-            return os.path.getmtime(
-                os.path.join(self.category.SLIDESHOW.dir, filename)
-            )
+            return os.path.getmtime(os.path.join(self.category.SLIDESHOW.dir, filename))
         return time.time()
 
     def set_last_updated(self, filename):
@@ -271,9 +258,7 @@ class slideshow:
                 )
             )
         else:
-            my_files_remove = self.get_content_ids(files).difference(
-                cat.tv_files
-            )
+            my_files_remove = self.get_content_ids(files).difference(cat.tv_files)
         remove_files = [
             os.path.join(cat.dir, f)
             for f in files
@@ -286,9 +271,7 @@ class slideshow:
                 self.log.debug("deleting file: {}".format(path))
                 os.unlink(path)
             else:
-                self.log.warning(
-                    "cannot remove {} as it does not exist".format(path)
-                )
+                self.log.warning("cannot remove {} as it does not exist".format(path))
         self.log.info("done checking for deleted files")
 
     async def download_thmbnails(self):
@@ -312,9 +295,7 @@ class slideshow:
             )
             if slideshow_files:
                 content_id = random.choice(slideshow_files)
-                self.log.info(
-                    "selecting tv art: content_id: {}".format(content_id)
-                )
+                self.log.info("selecting tv art: content_id: {}".format(content_id))
                 self.set_last_updated(
                     self.get_filename(content_id, self.category.SLIDESHOW)
                 )
@@ -332,16 +313,12 @@ class slideshow:
                         f.write(data)
         except Exception as e:
             self.log.error(
-                "error writing file: {}, {}".format(
-                    os.path.join(folder, filename), e
-                )
+                "error writing file: {}, {}".format(os.path.join(folder, filename), e)
             )
 
     def get_file_set(self, folder):
         return {
-            f
-            for f in os.listdir(folder)
-            if os.path.isfile(os.path.join(folder, f))
+            f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))
         }
 
     def get_content_ids(self, filenames):
@@ -361,9 +338,7 @@ class slideshow:
             try:
                 if await self.tv.in_artmode():
                     self.log.info(
-                        "time to next rotation: {}".format(
-                            self.get_countdown()
-                        )
+                        "time to next rotation: {}".format(self.get_countdown())
                     )
                     if not await self.do_random_update() and not start:
                         await self.download_thmbnails()

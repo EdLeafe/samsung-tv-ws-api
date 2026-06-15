@@ -100,9 +100,7 @@ class EnsureArtMode:
                         if art_mode != "on":
                             # Turn off
                             self.log.info("Turning TV off - to art mode")
-                            await self.tv.send_command(
-                                SendRemoteKey.click("KEY_POWER")
-                            )
+                            await self.tv.send_command(SendRemoteKey.click("KEY_POWER"))
 
                 except exceptions.ResponseError as e:
                     self.log.warning("ERROR: {}".format(e))

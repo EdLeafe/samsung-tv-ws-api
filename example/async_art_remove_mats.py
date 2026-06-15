@@ -149,23 +149,17 @@ async def main():
 
         # parse args.pmat
         pmat, pcolor = (
-            parse_args(mat_types, mat_colors, args.pmat)
-            if args.pmat
-            else (None, None)
+            parse_args(mat_types, mat_colors, args.pmat) if args.pmat else (None, None)
         )
 
         # List the art available in My-Photos on the device (or all art if -A selected)
-        available_art = await tv.available(
-            None if args.all else "MY-C0002", timeout=10
-        )
+        available_art = await tv.available(None if args.all else "MY-C0002", timeout=10)
 
         for art in available_art:
             try:
                 # set target mat/color combo
                 target_matte_type = get_target_matte(mat, color, art, True)
-                portrait_target_matte_type = get_target_matte(
-                    pmat, pcolor, art, False
-                )
+                portrait_target_matte_type = get_target_matte(pmat, pcolor, art, False)
 
                 if (
                     art["matte_id"] != target_matte_type
@@ -181,8 +175,7 @@ async def main():
                             art["content_id"],
                             target_matte_type,
                             None
-                            if portrait_target_matte_type
-                            == art["portrait_matte_id"]
+                            if portrait_target_matte_type == art["portrait_matte_id"]
                             else portrait_target_matte_type,
                         )
                     except ResponseError:

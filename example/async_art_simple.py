@@ -13,9 +13,7 @@ from samsungtvws.async_art import SamsungTVAsyncArt
 def parseargs():
     # Add command line argument parsing
     parser = argparse.ArgumentParser(
-        description="Example async art Samsung Frame TV Version: {}".format(
-            __version__
-        )
+        description="Example async art Samsung Frame TV Version: {}".format(__version__)
     )
     parser.add_argument(
         "ip",
@@ -95,9 +93,7 @@ async def main():
             # Request current art
             info = await tv.get_current()
             logging.info("current artwork: {}".format(info))
-            content_id = info[
-                "content_id"
-            ]  # example to get current content_id
+            content_id = info["content_id"]  # example to get current content_id
 
         except exceptions.ResponseError as e:
             logging.warning("ERROR: {}".format(e))

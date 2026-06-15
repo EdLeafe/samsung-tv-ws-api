@@ -13,4 +13,4 @@
 # version 3.0.7 E Leafe 20th may 2026 corrected logging level in connection.py
 # version 3.0.8 E Leafe 20th may 2026 corrected logging level in remaining files
 
-__version__ = '3.0.8'
+__version__ = "3.0.8"

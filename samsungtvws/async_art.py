@@ -8,25 +8,25 @@ Copyright (C) 2024,2025 Nick Waterton <n.waterton@outlook.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
-from datetime import datetime
+import asyncio
 import json
 import logging
-from pathlib import Path
 import random
-from pathlib import Path
-import asyncio
-import aiohttp
-from typing import Any, Dict, List, Optional, Union, Callable, Awaitable
-from urllib.parse import urlparse
 import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
+from urllib.parse import urlparse
+
+import aiohttp
 
 from . import exceptions, helper
-from .command import SamsungTVCommand
 from .async_connection import SamsungTVWSAsyncConnection
-from .remote import SamsungTVWS
-from .event import D2D_SERVICE_MESSAGE_EVENT, MS_CHANNEL_READY_EVENT
 from .async_rest import SamsungTVAsyncRest
+from .command import SamsungTVCommand
+from .event import D2D_SERVICE_MESSAGE_EVENT, MS_CHANNEL_READY_EVENT
 from .helper import get_ssl_context, is_true
+from .remote import SamsungTVWS
 
 _LOGGING = logging.getLogger(__name__)
 _LOGGING.setLevel(logging.INFO)
@@ -81,10 +81,16 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self.get_token()
 
     def get_token(self):
-        '''
+        """
         Open and close remote control websocket to get/check token
-        '''
-        tv = SamsungTVWS(self.host, port=self.port, token=self.token, token_file=self.token_file, timeout=self.timeout)
+        """
+        tv = SamsungTVWS(
+            self.host,
+            port=self.port,
+            token=self.token,
+            token_file=self.token_file,
+            timeout=self.timeout,
+        )
 
     async def open(self):
         await super().open()
@@ -126,7 +132,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         try:
             if request_uuid not in self.pending_requests.keys():
                 self.pending_requests[request_uuid] = asyncio.Future()
-            response = await asyncio.wait_for(self.pending_requests[request_uuid], timeout)
+            response = await asyncio.wait_for(
+                self.pending_requests[request_uuid], timeout
+            )
             data = json.loads(response["data"])
         except asyncio.exceptions.TimeoutError:
             pass
@@ -142,31 +150,33 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self,
         request_data: Dict[str, Any],
         wait_for_event: Optional[str] = None,
-        timeout: int = 2
+        timeout: int = 2,
     ) -> Optional[Dict[str, Any]]:
         if not request_data.get("id"):
-            request_data["id"] = self.get_uuid()            #old api
-        request_data["request_id"] = request_data["id"]     #new api
+            request_data["id"] = self.get_uuid()  # old api
+        request_data["request_id"] = request_data["id"]  # new api
         self.pending_requests[wait_for_event or request_data["id"]] = asyncio.Future()
         await self.start_listening()
         await self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
-        return await self.wait_for_response(wait_for_event or request_data["id"], timeout)
+        return await self.wait_for_response(
+            wait_for_event or request_data["id"], timeout
+        )
 
     async def process_event(self, event=None, response=None):
         # _LOGGING.debug("process_event: event=%s, pending=%s", event, list(self.pending_requests.keys()))
         if event == D2D_SERVICE_MESSAGE_EVENT:
             data = json.loads(response["data"])
             sub_event = data.get("event", "*")
-            request_id = data.get('request_id', data.get('id'))
+            request_id = data.get("request_id", data.get("id"))
             # _LOGGING.debug("d2d message: sub_event=%s, request_id=%s", sub_event, request_id)
-            if 'artmode_status' in sub_event:
+            if "artmode_status" in sub_event:
                 # API 5.x may use 'status' instead of 'value'
-                self.art_mode = data.get('value', data.get('status', 'off')) == 'on'
-            elif sub_event == 'art_mode_changed':
-                self.art_mode = data.get('status', 'off') == 'on'
-            elif sub_event == 'go_to_standby':
+                self.art_mode = data.get("value", data.get("status", "off")) == "on"
+            elif sub_event == "art_mode_changed":
+                self.art_mode = data.get("status", "off") == "on"
+            elif sub_event == "go_to_standby":
                 self.art_mode = False
-            elif 'wakeup' in sub_event:
+            elif "wakeup" in sub_event:
                 asyncio.create_task(self.get_artmode())
 
             if sub_event in self.callbacks.keys():
@@ -174,13 +184,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 if awaitable:
                     asyncio.create_task(awaitable)
 
-            request_id = data.get('request_id', data.get('id'))
+            request_id = data.get("request_id", data.get("id"))
             try:
                 if request_id in self.pending_requests.keys():
                     self.pending_requests[request_id].set_result(response)
                 elif sub_event in self.pending_requests.keys():
                     self.pending_requests[sub_event].set_result(response)
-            except asyncio.exceptions.InvalidStateError:    #already completed
+            except asyncio.exceptions.InvalidStateError:  # already completed
                 pass
 
     def set_callback(self, trigger, callback=None):
@@ -198,13 +208,15 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     def _get_rest_api(self) -> SamsungTVAsyncRest:
         self.get_session()
         if self._rest_api is None:
-            self._rest_api = SamsungTVAsyncRest(host=self.host, port=self.port, session=self.session)
+            self._rest_api = SamsungTVAsyncRest(
+                host=self.host, port=self.port, session=self.session
+            )
         return self._rest_api
 
     async def _get_device_info(self):
         try:
             async with self.lock:
-                await asyncio.sleep(0.1)    #do not hit rest api to frequently
+                await asyncio.sleep(0.1)  # do not hit rest api to frequently
                 return await self._get_rest_api().rest_device_info()
         except Exception as e:
             pass
@@ -216,125 +228,121 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
 
     async def on(self) -> bool:
         data = await self._get_device_info()
-        return data.get("device", {}).get('PowerState', 'off') == 'on'
+        return data.get("device", {}).get("PowerState", "off") == "on"
 
     async def is_artmode(self) -> bool:
         return await self.on() and self.art_mode
 
     async def in_artmode(self) -> bool:
-        return await self.on() and await self.get_artmode() == 'on'
+        return await self.on() and await self.get_artmode() == "on"
 
     async def get_api_version(self):
-        data = await self._send_art_request(
-            {"request": "get_api_version"}
-        )
+        data = await self._send_art_request({"request": "get_api_version"})
         if not data:
-            data = await self._send_art_request(
-                {"request": "api_version"}
-            )
+            data = await self._send_art_request({"request": "api_version"})
         assert data
         return data["version"]
 
     async def get_device_info(self):
-        data = await self._send_art_request(
-            {"request": "get_device_info"}
-        )
+        data = await self._send_art_request({"request": "get_device_info"})
         assert data
         return data
 
     async def available(self, category=None, timeout=4):
-        '''
+        """
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
-        '''
+        """
         data = await self._send_art_request(
             {"request": "get_content_list", "category": category},
-            timeout=timeout
+            timeout=timeout,
         )
         assert data
-        return [ v for v in json.loads(data["content_list"]) if v["category_id"] == category] if category else json.loads(data["content_list"])
+        return (
+            [
+                v
+                for v in json.loads(data["content_list"])
+                if v["category_id"] == category
+            ]
+            if category
+            else json.loads(data["content_list"])
+        )
 
     async def get_current(self):
-        data = await self._send_art_request(
-            {"request": "get_current_artwork"}
-        )
+        data = await self._send_art_request({"request": "get_current_artwork"})
         assert data
         return data
-        
+
     async def set_favourite(self, content_id, status="on"):
         status = "on" if is_true(status) else "off"
         data = await self._send_art_request(
-            {   "request": "change_favorite",
+            {
+                "request": "change_favorite",
                 "content_id": content_id,
-                "status": status},
-            wait_for_event = "favorite_changed"
+                "status": status,
+            },
+            wait_for_event="favorite_changed",
         )
         assert data
         return data
 
-    async def get_artmode_settings(self, setting=''):
-        '''
+    async def get_artmode_settings(self, setting=""):
+        """
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
         'motion_timer', or 'brightness_sensor_setting'
-        '''
-        data = await self._send_art_request(
-            {"request": "get_artmode_settings"}
-        )
+        """
+        data = await self._send_art_request({"request": "get_artmode_settings"})
         assert data
-        data = json.loads(data['data'])
-        return next(iter(item for item in data if item['item'] == setting), data)
+        data = json.loads(data["data"])
+        return next(iter(item for item in data if item["item"] == setting), data)
 
     async def get_auto_rotation_status(self):
-        data = await self._send_art_request(
-            {"request": "get_auto_rotation_status"}
-        )
+        data = await self._send_art_request({"request": "get_auto_rotation_status"})
         assert data
         return data
 
     async def set_auto_rotation_status(self, duration=0, type=True, category=2):
-        '''
+        """
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
-        '''
+        """
         data = await self._send_art_request(
-            {   "request": "set_auto_rotation_status",
+            {
+                "request": "set_auto_rotation_status",
                 "value": str(duration) if duration > 0 else "off",
                 "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
+                "type": "shuffleslideshow" if type else "slideshow",
             }
         )
         assert data
         return data
 
     async def get_slideshow_status(self):
-        data = await self._send_art_request(
-            {"request": "get_slideshow_status"}
-        )
+        data = await self._send_art_request({"request": "get_slideshow_status"})
         assert data
         return data
 
     async def set_slideshow_status(self, duration=0, type=True, category=2):
-        '''
+        """
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
         slide show type can be "slideshow" or "shuffleslideshow", set True for shuffleslideshow
         category is 'MY-C0004' or 'MY-C0002' where 4 is favourites, 2 is my pictures, and 8 is store
-        '''
+        """
         data = await self._send_art_request(
-            {   "request": "set_slideshow_status",
+            {
+                "request": "set_slideshow_status",
                 "value": str(duration) if duration > 0 else "off",
                 "category_id": "MY-C000{}".format(category),
-                "type": "shuffleslideshow" if type else "slideshow"
+                "type": "shuffleslideshow" if type else "slideshow",
             }
         )
         assert data
         return data
 
     async def get_brightness(self):
-        data = await self._send_art_request(
-            {"request": "get_brightness"}
-        )
+        data = await self._send_art_request({"request": "get_brightness"})
         if not data:
-            data = await self.get_artmode_settings('brightness')
+            data = await self.get_artmode_settings("brightness")
         assert data
         return data
 
@@ -347,11 +355,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         return data
 
     async def get_color_temperature(self):
-        data = await self._send_art_request(
-            {"request": "get_color_temperature"}
-        )
+        data = await self._send_art_request({"request": "get_color_temperature"})
         if not data:
-            data = await self.get_artmode_settings('color_temperature')
+            data = await self.get_artmode_settings("color_temperature")
         assert data
         return data
 
@@ -362,7 +368,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
-        
+
     async def set_brightness_sensor_setting(self, value):
         value = "on" if is_true(value) else "off"
         data = await self._send_art_request(
@@ -370,15 +376,15 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
-        
+
     async def set_motion_timer(self, value):
-        # "off", "5", "15", "30", "60", "120","240" 
+        # "off", "5", "15", "30", "60", "120","240"
         data = await self._send_art_request(
             {"request": "set_motion_timer", "value": value}
         )
         assert data
         return data
-        
+
     async def set_motion_sensitivity(self, value):
         # "1" to "3"
         data = await self._send_art_request(
@@ -386,11 +392,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
- 
+
     async def get_thumbnail_list(self, content_id_list=[]):
         if isinstance(content_id_list, str):
-            content_id_list=[content_id_list]
-        content_id_list=[{"content_id": id} for id in content_id_list]
+            content_id_list = [content_id_list]
+        content_id_list = [{"content_id": id} for id in content_id_list]
         data = await self._send_art_request(
             {
                 "request": "get_thumbnail_list",
@@ -399,17 +405,19 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     "d2d_mode": "socket",
                     "connection_id": random.randrange(4 * 1024 * 1024 * 1024),
                     "id": self.get_uuid(),
-                }
+                },
             }
         )
         assert data
         conn_info = json.loads(data["conn_info"])
-        ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
+        ssl_context = get_ssl_context() if conn_info.get("secured", False) else None
+        reader, writer = await asyncio.open_connection(
+            conn_info["ip"], int(conn_info["port"]), ssl=ssl_context
+        )
         total_num_thumbnails = 1
         current_thumb = -1
         thumbnail_data_dict = {}
-        while current_thumb+1 < total_num_thumbnails:
+        while current_thumb + 1 < total_num_thumbnails:
             header_len = int.from_bytes(await reader.readexactly(4), "big")
             header = json.loads(await reader.readexactly(header_len))
             thumbnail_data_len = int(header["fileLength"])
@@ -422,7 +430,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
 
     async def get_thumbnail(self, content_id_list=[], as_dict=False):
         if isinstance(content_id_list, str):
-            content_id_list=[content_id_list]
+            content_id_list = [content_id_list]
         thumbnail_data_dict = {}
         thumbnail_data = None
         for content_id in content_id_list:
@@ -433,13 +441,15 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     "conn_info": {
                         "d2d_mode": "socket",
                         "connection_id": random.randrange(4 * 1024 * 1024 * 1024),
-                        "id": self.get_uuid()
-                    }
+                        "id": self.get_uuid(),
+                    },
                 }
             )
             assert data
             conn_info = json.loads(data["conn_info"])
-            reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']))
+            reader, writer = await asyncio.open_connection(
+                conn_info["ip"], int(conn_info["port"])
+            )
             header_len = int.from_bytes(await reader.readexactly(4), "big")
             header = json.loads(await reader.readexactly(header_len))
             thumbnail_data_len = int(header["fileLength"])
@@ -447,10 +457,25 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             writer.close()
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data_dict[filename] = thumbnail_data
-        return thumbnail_data_dict if as_dict else list(thumbnail_data_dict.values()) if len(content_id_list) > 1 else thumbnail_data
+        return (
+            thumbnail_data_dict
+            if as_dict
+            else list(thumbnail_data_dict.values())
+            if len(content_id_list) > 1
+            else thumbnail_data
+        )
 
-    async def upload(self, file, matte="shadowbox_polar", portrait_matte="shadowbox_polar", file_type="png", date=None, timeout=10, CHUNK_SIZE=64*1024):
-        '''
+    async def upload(
+        self,
+        file,
+        matte="shadowbox_polar",
+        portrait_matte="shadowbox_polar",
+        file_type="png",
+        date=None,
+        timeout=10,
+        CHUNK_SIZE=64 * 1024,
+    ):
+        """
         NOTE: both id's and request_id have to be the same
 
         Handle uploading images from different source types.
@@ -462,27 +487,28 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         which makes it a URL.
         High quality images will be large, and reading them into memory can be inefficient, so we
         define several methods above to yield their contents in CHUNK_SIZE pieces.
-        '''
+        """
+
         async def _bytes_chunker(data):
-            '''
+            """
             Return the bytes in CHUNK_SIZE pieces
-            '''
-            for pos in range(0, len(data)+1, CHUNK_SIZE):
-                yield data[pos: pos+CHUNK_SIZE]
+            """
+            for pos in range(0, len(data) + 1, CHUNK_SIZE):
+                yield data[pos : pos + CHUNK_SIZE]
 
         async def _stream_chunker(url):
-            '''
+            """
             Stream the image, yielding CHUNK_SIZE pieces
-            '''
+            """
             async with aiohttp.ClientSession().get(url) as response:
                 response.raise_for_status()  # Raise an exception for bad status codes
                 async for chunk in response.content.iter_chunked(CHUNK_SIZE):
                     yield chunk
 
         async def _file_chunker(pth):
-            '''
+            """
             Read the image file, yielding CHUNK_SIZE pieces
-            '''
+            """
             with open(pth, "rb") as f:
                 while True:
                     chunk = f.read(CHUNK_SIZE)
@@ -494,7 +520,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             pth = Path(file)
             file_name = pth.stem
             file_type = pth.suffix[1:]
-            
+
             # Check if the string is a URL for a remote image file
             url_parts = urlparse(file)
             if url_parts.scheme:
@@ -522,7 +548,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             {
                 "request": "send_image",
                 "file_type": file_type,
-                "request_id" : self.get_uuid(),
+                "request_id": self.get_uuid(),
                 "id": self.art_uuid,
                 "conn_info": {
                     "d2d_mode": "socket",
@@ -535,13 +561,19 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "file_size": file_size,
             },
             wait_for_event="ready_to_use",
-            timeout=timeout
+            timeout=timeout,
         )
         if not data:
-            _LOGGING.error("upload: send_image request timed out (no 'ready_to_use' response in %ss). "
-                           "listener_alive=%s, connection_alive=%s",
-                           timeout, self._recv_loop is not None and not self._recv_loop.done(), self.is_alive())
-            raise exceptions.ConnectionFailure("TV did not respond to send_image request")
+            _LOGGING.error(
+                "upload: send_image request timed out (no 'ready_to_use' response in %ss). "
+                "listener_alive=%s, connection_alive=%s",
+                timeout,
+                self._recv_loop is not None and not self._recv_loop.done(),
+                self.is_alive(),
+            )
+            raise exceptions.ConnectionFailure(
+                "TV did not respond to send_image request"
+            )
         conn_info = json.loads(data["conn_info"])
         header = json.dumps(
             {
@@ -555,8 +587,10 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
             }
         )
 
-        ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
+        ssl_context = get_ssl_context() if conn_info.get("secured", False) else None
+        reader, writer = await asyncio.open_connection(
+            conn_info["ip"], int(conn_info["port"]), ssl=ssl_context
+        )
         writer.write(len(header).to_bytes(4, "big"))
         writer.write(header.encode("ascii"))
         # Send the image contents in chunks
@@ -573,8 +607,9 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def delete_list(self, content_ids):
         content_id_list = [{"content_id": item} for item in content_ids]
         await self._send_art_request(
-            {   "request": "delete_image_list",
-                "content_id_list": content_id_list
+            {
+                "request": "delete_image_list",
+                "content_id_list": content_id_list,
             }
         )
 
@@ -607,16 +642,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
 
     async def get_rotation(self):
-        data = await self._send_art_request(
-            {"request": "get_current_rotation"}
-        )
+        data = await self._send_art_request({"request": "get_current_rotation"})
         assert data
-        return data.get("current_rotation_status",0)
+        return data.get("current_rotation_status", 0)
 
     async def get_photo_filter_list(self):
-        data = await self._send_art_request(
-            {"request": "get_photo_filter_list"}
-        )
+        data = await self._send_art_request({"request": "get_photo_filter_list"})
         assert data
         return json.loads(data["filter_list"])
 
@@ -630,22 +661,27 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
 
     async def get_matte_list(self, include_colour=False):
-        data = await self._send_art_request(
-            {"request": "get_matte_list"}
-        )
+        data = await self._send_art_request({"request": "get_matte_list"})
         assert data
-        return (json.loads(data["matte_type_list"]), json.loads(data.get("matte_color_list"))) if include_colour else json.loads(data["matte_type_list"])
+        return (
+            (
+                json.loads(data["matte_type_list"]),
+                json.loads(data.get("matte_color_list")),
+            )
+            if include_colour
+            else json.loads(data["matte_type_list"])
+        )
 
     async def change_matte(self, content_id, matte_id=None, portrait_matte=None):
-        '''
+        """
         matte is name_color eg flexible_polar or none
         NOTE: Not all mattes can be set for all image sizes!
-        '''
+        """
         art_request = {
-                        "request": "change_matte",
-                        "content_id": content_id,
-                        "matte_id": matte_id or 'none',
-                      }
+            "request": "change_matte",
+            "content_id": content_id,
+            "matte_id": matte_id or "none",
+        }
         if portrait_matte:
             art_request["portrait_matte_id"] = portrait_matte
         await self._send_art_request(art_request)

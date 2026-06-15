@@ -77,9 +77,7 @@ logging.basicConfig(level=logging.INFO)
 def parseargs():
     # Add command line argument parsing
     parser = argparse.ArgumentParser(
-        description="Async Upload images to Samsung TV Version: {}".format(
-            __version__
-        )
+        description="Async Upload images to Samsung TV Version: {}".format(__version__)
     )
     parser.add_argument(
         "ip",
@@ -216,9 +214,7 @@ class PIL_methods:
         compare file data with thumbnails to find a match, and update update_uploaded_files
         """
         for k, (filename, file_data) in enumerate(files_images.items()):
-            for i, (my_content_id, my_data) in enumerate(
-                my_photos_thumbnails.items()
-            ):
+            for i, (my_content_id, my_data) in enumerate(my_photos_thumbnails.items()):
                 self.log_progress(
                     len(files_images) * len(my_photos_thumbnails),
                     k * len(files_images) + i,
@@ -228,13 +224,9 @@ class PIL_methods:
                         filename, my_content_id, len(my_data)
                     )
                 )
-                if self.are_images_equal(
-                    Image.open(io.BytesIO(my_data)), file_data
-                ):
+                if self.are_images_equal(Image.open(io.BytesIO(my_data)), file_data):
                     self.log.info(
-                        "found uploaded file: {} as {}".format(
-                            filename, my_content_id
-                        )
+                        "found uploaded file: {} as {}".format(filename, my_content_id)
                     )
                     if filename not in self.uploaded_files.keys():
                         self.mon.update_uploaded_files(filename, my_content_id)
@@ -270,9 +262,7 @@ class PIL_methods:
         for file in files:
             try:
                 data = Image.open(os.path.join(self.folder, file))
-                format = self.mon.get_file_type(
-                    os.path.join(self.folder, file), data
-                )
+                format = self.mon.get_file_type(os.path.join(self.folder, file), data)
                 if not (
                     file.lower().endswith(format)
                     or (format == "jpeg" and file.lower().endswith("jpg"))
@@ -323,9 +313,7 @@ class PIL_methods:
             file_type = "jpeg"
         if not (org == file_type or (org == "jpg" and file_type == "jpeg")):
             self.log.warning(
-                "file {} type changed from {} to {}".format(
-                    filename, org, file_type
-                )
+                "file {} type changed from {} to {}".format(filename, org, file_type)
             )
         return file_type
 
@@ -348,9 +336,7 @@ class PIL_methods:
         )  # updated 11/3/25 per suggestion in issue #11
         diff = sum(list(img3.getdata())) / (384 * 216)  # normalize
         equal_content = diff <= 1.0  # pick a threshhold
-        self.log.debug(
-            "equal_content: {}, diff: {}".format(equal_content, diff)
-        )
+        self.log.debug("equal_content: {}, diff: {}".format(equal_content, diff))
         return equal_content
 
 
@@ -374,13 +360,9 @@ class monitor_and_display:
         self.debug = self.log.getEffectiveLevel() <= logging.DEBUG
         self.ip = ip
         self.folder = folder
-        self.update_time = int(
-            max(0, update_time * 60)
-        )  # convert minutes to seconds
+        self.update_time = int(max(0, update_time * 60))  # convert minutes to seconds
         self.period = (
-            min(max(5, period), self.update_time)
-            if self.update_time > 0
-            else period
+            min(max(5, period), self.update_time) if self.update_time > 0 else period
         )
         self.include_fav = include_fav
         self.sync = sync
@@ -389,9 +371,7 @@ class monitor_and_display:
         self.on = on
         # Autosave token to file
         self.token_file = (
-            os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), token_file
-            )
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), token_file)
             if token_file
             else token_file
         )
@@ -402,9 +382,7 @@ class monitor_and_display:
         self.start = time.time()
         self.current_content_id = None
         self.pil = PIL_methods(self)
-        self.tv = SamsungTVAsyncArt(
-            host=self.ip, port=8002, token_file=self.token_file
-        )
+        self.tv = SamsungTVAsyncArt(host=self.ip, port=8002, token_file=self.token_file)
         try:
             # doesn't work in Windows
             asyncio.get_running_loop().add_signal_handler(SIGINT, self.close)
@@ -473,9 +451,7 @@ class monitor_and_display:
                     )
                 )
             except AssertionError:
-                self.log.warning(
-                    "Error getting mattes list, setting to none".format(e)
-                )
+                self.log.warning("Error getting mattes list, setting to none".format(e))
             self.matte = "none"
 
     async def initialize(self):
@@ -491,16 +467,12 @@ class monitor_and_display:
         self.log.info("Current artwork is: {}".format(self.current_content_id))
         self.load_program_data()
         self.log.info(
-            "files in directory: {}: {}".format(
-                self.folder, self.get_folder_files()
-            )
+            "files in directory: {}: {}".format(self.folder, self.get_folder_files())
         )
         if self.sync:
             await self.pil.initialize()  # optional
         else:
-            self.log.warning(
-                "syncing disabled, not updating uploaded files list"
-            )
+            self.log.warning("syncing disabled, not updating uploaded files list")
 
     async def get_tv_content(self, category="MY-C0002"):
         """
@@ -508,8 +480,7 @@ class monitor_and_display:
         """
         try:
             result = [
-                v["content_id"]
-                for v in await self.tv.available(category, timeout=10)
+                v["content_id"] for v in await self.tv.available(category, timeout=10)
             ]
         except AssertionError:
             self.log.warning("failed to get contents from TV")
@@ -524,8 +495,7 @@ class monitor_and_display:
             f
             for f in os.listdir(self.folder)
             if os.path.isfile(os.path.join(self.folder, f))
-            and self.get_file_type(os.path.join(self.folder, f))
-            in self.allowed_ext
+            and self.get_file_type(os.path.join(self.folder, f)) in self.allowed_ext
         ]
 
     async def get_current_artwork(self):
@@ -564,9 +534,7 @@ class monitor_and_display:
         if os.path.isfile(self.program_data_path):
             with open(self.program_data_path, "r") as f:
                 program_data = json.load(f)
-                self.uploaded_files = program_data.get(
-                    "uploaded_files", program_data
-                )
+                self.uploaded_files = program_data.get("uploaded_files", program_data)
                 self.start = program_data.get("last_update", time.time())
         else:
             self.uploaded_files = {}
@@ -650,9 +618,7 @@ class monitor_and_display:
                         )
                     )
                 else:
-                    self.log.warning(
-                        "file: {} failed to upload".format(filename)
-                    )
+                    self.log.warning("file: {} failed to upload".format(filename))
                 self.write_program_data()
 
     async def delete_files_from_tv(self, content_ids):
@@ -671,9 +637,7 @@ class monitor_and_display:
         try:
             return os.path.getmtime(os.path.join(self.folder, filename))
         except Exception as e:
-            self.log.warning(
-                "error: {}, returning current timestamp".format(e)
-            )
+            self.log.warning("error: {}, returning current timestamp".format(e))
         return int(time.time())
 
     async def remove_files(self, files):
@@ -681,9 +645,7 @@ class monitor_and_display:
         if files deleted, remove them from tv
         """
         content_ids_removed = [
-            v["content_id"]
-            for k, v in self.uploaded_files.items()
-            if k not in files
+            v["content_id"] for k, v in self.uploaded_files.items() if k not in files
         ]
         # delete images from tv
         if content_ids_removed:
@@ -713,8 +675,7 @@ class monitor_and_display:
             f
             for f in files
             if f in self.uploaded_files.keys()
-            and self.uploaded_files[f].get("modified")
-            != self.get_last_updated(f)
+            and self.uploaded_files[f].get("modified") != self.get_last_updated(f)
         ]
         # delete old file and upload new:
         if modified_files:
@@ -759,9 +720,7 @@ class monitor_and_display:
                 self.log.info(
                     "next {} update in {}".format(
                         "sequential" if self.sequential else "random",
-                        self.get_time(
-                            self.update_time - (time.time() - self.start)
-                        ),
+                        self.get_time(self.update_time - (time.time() - self.start)),
                     )
                 )
 
@@ -772,28 +731,20 @@ class monitor_and_display:
         """
         if self.fav:
             return list(
-                {v["content_id"] for v in self.uploaded_files.values()}.union(
-                    self.fav
-                )
+                {v["content_id"] for v in self.uploaded_files.values()}.union(self.fav)
             )
-        return [
-            v["content_id"] for k, v in sorted(self.uploaded_files.items())
-        ]
+        return [v["content_id"] for k, v in sorted(self.uploaded_files.items())]
 
     def get_next_art(self):
         """
         get next content_id from list (excluding current content id), set current_content_id or return None if no list
         """
         content_ids = [
-            id
-            for id in self.get_content_ids()
-            if id != self.current_content_id
+            id for id in self.get_content_ids() if id != self.current_content_id
         ]
         if content_ids:
             content_id = (
-                self.next_value(
-                    self.current_content_id, self.get_content_ids()
-                )
+                self.next_value(self.current_content_id, self.get_content_ids())
                 if self.sequential
                 else random.choice(content_ids)
             )
@@ -819,9 +770,7 @@ class monitor_and_display:
         """
         content_id = self.get_next_art()
         if content_id and content_id != self.current_content_id:
-            self.log.info(
-                "selecting tv art: content_id: {}".format(content_id)
-            )
+            self.log.info("selecting tv art: content_id: {}".format(content_id))
             await self.tv.select_image(content_id)
             self.current_content_id = content_id
         else:

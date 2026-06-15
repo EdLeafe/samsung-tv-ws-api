@@ -9,8 +9,8 @@ SPDX-License-Identifier: LGPL-3.0
 import logging
 from typing import Any, Dict, Optional
 
-import urllib3
 import requests
+import urllib3
 
 from . import connection, exceptions, helper
 
@@ -50,14 +50,14 @@ class SamsungTVRest(connection.SamsungTVWSBaseConnection):
             raise exceptions.HttpApiError(
                 "TV unreachable or feature not supported on this model."
             ) from err
-            
+
     def rest_power_state(self) -> bool:
         _LOGGING.debug("Get PowerState via rest api")
-        return self._rest_request("").get('device', {}).get('PowerState', 'off') == 'on'
-        
+        return self._rest_request("").get("device", {}).get("PowerState", "off") == "on"
+
     def get_model_year(self) -> int:
-        model = self._rest_request("").get('device', {}).get('model', '0_0')
-        return int(model.split('_')[0])
+        model = self._rest_request("").get("device", {}).get("model", "0_0")
+        return int(model.split("_")[0])
 
     def rest_device_info(self) -> Dict[str, Any]:
         _LOGGING.debug("Get device info via rest api")

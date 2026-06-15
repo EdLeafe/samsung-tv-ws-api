@@ -215,9 +215,7 @@ class SamsungTVArt(SamsungTVWSConnection):
         assert data
         if "data" in data.keys():
             data = json.loads(data["data"])
-            return next(
-                iter(item for item in data if item["item"] == setting), data
-            )
+            return next(iter(item for item in data if item["item"] == setting), data)
         return data
 
     def get_auto_rotation_status(self):
@@ -274,9 +272,7 @@ class SamsungTVArt(SamsungTVWSConnection):
 
     def set_brightness(self, value):
         # "0" to "10"
-        data = self._send_art_request(
-            {"request": "set_brightness", "value": value}
-        )
+        data = self._send_art_request({"request": "set_brightness", "value": value})
         assert data
         return data
 
@@ -306,9 +302,7 @@ class SamsungTVArt(SamsungTVWSConnection):
 
     def set_motion_timer(self, value):
         # "off", "5", "15", "30", "60", "120","240"
-        data = self._send_art_request(
-            {"request": "set_motion_timer", "value": value}
-        )
+        data = self._send_art_request({"request": "set_motion_timer", "value": value})
         assert data
         return data
 
@@ -356,9 +350,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data = bytearray()
             while len(thumbnail_data) < thumbnail_data_len:
-                packet = art_socket.recv(
-                    thumbnail_data_len - len(thumbnail_data)
-                )
+                packet = art_socket.recv(thumbnail_data_len - len(thumbnail_data))
                 thumbnail_data.extend(packet)
             thumbnail_data_dict[filename] = thumbnail_data
         return thumbnail_data_dict
@@ -375,9 +367,7 @@ class SamsungTVArt(SamsungTVWSConnection):
                     "content_id": content_id,
                     "conn_info": {
                         "d2d_mode": "socket",
-                        "connection_id": random.randrange(
-                            4 * 1024 * 1024 * 1024
-                        ),
+                        "connection_id": random.randrange(4 * 1024 * 1024 * 1024),
                         "id": self.get_uuid(),
                     },
                 }
@@ -393,9 +383,7 @@ class SamsungTVArt(SamsungTVWSConnection):
             thumbnail_data_len = int(header["fileLength"])
             thumbnail_data = bytearray()
             while len(thumbnail_data) < thumbnail_data_len:
-                packet = art_socket.recv(
-                    thumbnail_data_len - len(thumbnail_data)
-                )
+                packet = art_socket.recv(thumbnail_data_len - len(thumbnail_data))
                 thumbnail_data.extend(packet)
             filename = "{}.{}".format(header["fileID"], header["fileType"])
             thumbnail_data_dict[filename] = thumbnail_data

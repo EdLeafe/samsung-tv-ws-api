@@ -116,9 +116,7 @@ class SamsungTVWSBaseConnection:
     def _websocket_event(self, event: str, response: Dict[str, Any]) -> None:
         """Handle websocket event."""
         if event == MS_ERROR_EVENT:
-            _LOGGING.warning(
-                "SamsungTVWS websocket error message: %s", response
-            )
+            _LOGGING.warning("SamsungTVWS websocket error message: %s", response)
             message = response.get("data", {}).get("message")
             if message == "unrecognized method value : ms.remote.control":
                 _LOGGING.error(
@@ -149,9 +147,7 @@ class SamsungTVWSConnection(SamsungTVWSBaseConnection):
             return self.connection
 
         url = self._format_websocket_url(self.endpoint)
-        sslopt = (
-            {"cert_reqs": ssl.CERT_NONE} if self._is_ssl_connection() else {}
-        )
+        sslopt = {"cert_reqs": ssl.CERT_NONE} if self._is_ssl_connection() else {}
 
         _LOGGING.debug("WS url %s", url)
         # Only for debug use!
@@ -229,19 +225,13 @@ class SamsungTVWSConnection(SamsungTVWSBaseConnection):
 
     def send_command(
         self,
-        command: Union[
-            List[SamsungTVCommand], SamsungTVCommand, Dict[str, Any]
-        ],
+        command: Union[List[SamsungTVCommand], SamsungTVCommand, Dict[str, Any]],
         key_press_delay: Optional[float] = None,
     ) -> None:
         if self.connection is None:
             self.connection = self.open()
 
-        delay = (
-            self.key_press_delay
-            if key_press_delay is None
-            else key_press_delay
-        )
+        delay = self.key_press_delay if key_press_delay is None else key_press_delay
 
         if isinstance(command, list):
             for sub_command in command:

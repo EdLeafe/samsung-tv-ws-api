@@ -21,9 +21,7 @@ if not tv.art().supported():
 
 # List available mats for displaying art
 matte_types = [
-    matte_type
-    for elem in tv.art().get_matte_list()
-    for matte_type in elem.values()
+    matte_type for elem in tv.art().get_matte_list() for matte_type in elem.values()
 ]
 
 if target_matte_type not in matte_types:

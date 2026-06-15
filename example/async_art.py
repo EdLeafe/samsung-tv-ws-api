@@ -13,9 +13,7 @@ from samsungtvws.async_art import SamsungTVAsyncArt
 def parseargs():
     # Add command line argument parsing
     parser = argparse.ArgumentParser(
-        description="Example async art Samsung Frame TV Version: {}".format(
-            __version__
-        )
+        description="Example async art Samsung Frame TV Version: {}".format(__version__)
     )
     parser.add_argument(
         "ip",
@@ -72,25 +70,21 @@ async def main():
 
             # is art mode on
             # art_mode = await tv.get_artmode()                  #calls websocket command to determine status
-            art_mode = tv.art_mode  # passive, listens for websocket messgages to determine art mode status
+            art_mode = (
+                tv.art_mode
+            )  # passive, listens for websocket messgages to determine art mode status
             logging.info("art mode is on: {}".format(art_mode))
 
             # check both with one call (calls tv rest api)
-            logging.info(
-                "tv is on and in art mode: {}".format(await tv.is_artmode())
-            )
+            logging.info("tv is on and in art mode: {}".format(await tv.is_artmode()))
 
             # get api version 4.3.4.0 is new api, 2.03 is old api
             api_version = await tv.get_api_version()
             logging.info("api version: {}".format(api_version))
 
             # example callbacks
-            tv.set_callback(
-                "slideshow_image_changed", image_callback
-            )  # new api
-            tv.set_callback(
-                "auto_rotation_image_changed", image_callback
-            )  # old api
+            tv.set_callback("slideshow_image_changed", image_callback)  # new api
+            tv.set_callback("auto_rotation_image_changed", image_callback)  # old api
             tv.set_callback("image_selected", image_callback)
 
             # Request list of all art
@@ -104,9 +98,7 @@ async def main():
             # Request current art
             info = await tv.get_current()
             logging.info("current artwork: {}".format(info))
-            content_id = info[
-                "content_id"
-            ]  # example to get current content_id
+            content_id = info["content_id"]  # example to get current content_id
 
             # get thumbnail for current artwork
             try:
@@ -204,11 +196,7 @@ async def main():
             rot = await tv.get_rotation()
             logging.info(
                 "Current Orientation: {} ({})".format(
-                    "Landscape"
-                    if rot == 1
-                    else "Portrait"
-                    if rot == 2
-                    else "Unknown",
+                    "Landscape" if rot == 1 else "Portrait" if rot == 2 else "Unknown",
                     rot,
                 )
             )

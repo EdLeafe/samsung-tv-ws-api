@@ -234,9 +234,7 @@ class WebServer:
             config.bind = "{}:{}".format(self.host, self.port)
             config.loglevel = "DEBUG" if self.debug else "INFO"
             asyncio.create_task(self.tv.start_monitoring())
-            await serve(
-                self.app, config, shutdown_trigger=self.shutdown_trigger
-            )
+            await serve(self.app, config, shutdown_trigger=self.shutdown_trigger)
         else:
             self.log.info("DEVELOPMENT Mode")
             await asyncio.gather(
@@ -327,9 +325,7 @@ class WebServer:
             )  # blocks until next filename is available
             for websoc in self.connected:
                 self.log.info(
-                    "WS({}): will be skipping: {}".format(
-                        websoc.id, websoc.skip
-                    )
+                    "WS({}): will be skipping: {}".format(websoc.id, websoc.skip)
                 )
                 if (
                     data["name"] in websoc.skip
@@ -414,9 +410,7 @@ class WebServer:
         except Exception as e:
             self.log.exception(e)
         finally:
-            self.log.info(
-                "WS({}): cancelling websocket tasks".format(websoc.id)
-            )
+            self.log.info("WS({}): cancelling websocket tasks".format(websoc.id))
             try:
                 consumer.cancel()
                 producer.cancel()
@@ -449,9 +443,7 @@ class WebServer:
         """
         # default info
         data = {"id": Path(file).with_suffix(""), "name": file}
-        text_file = Path(
-            self.app.static_folder, Path(file).with_suffix(".TXT")
-        )
+        text_file = Path(self.app.static_folder, Path(file).with_suffix(".TXT"))
         if not text_file.is_file():
             text_file = Path(text_file).with_suffix(".txt")
         try:

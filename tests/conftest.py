@@ -34,9 +34,7 @@ def override_asyncio_sleep():
     """Ignore asyncio sleep in tests."""
     sleep_future = asyncio.Future()
     sleep_future.set_result(None)
-    with patch(
-        "samsungtvws.async_connection.asyncio.sleep", return_value=sleep_future
-    ):
+    with patch("samsungtvws.async_connection.asyncio.sleep", return_value=sleep_future):
         yield
 
 
