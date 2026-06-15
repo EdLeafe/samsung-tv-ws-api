@@ -75,3 +75,8 @@ module = [
     'samsungtvws.remote',
 ]
 disallow_untyped_calls = false
+
+[dependency-groups]
+dev = [
+    "ipython>=9.14.1",
+]

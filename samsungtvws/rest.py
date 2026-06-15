@@ -15,6 +15,7 @@ import requests
 from . import connection, exceptions, helper
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 # Disable InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

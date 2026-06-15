@@ -9,5 +9,8 @@
 # version 3.0.3 N Waterton 24th March 2025 added asyncio.Lock to '_get_device_info' in async_art.py updated web_interface to fully async.
 # version 3.0.4 N Waterton 8th December 2025 added set_brightness_sensor_setting(), set_motion_timer(), set_motion_sensitivity() and is_true(), cleaned up set_artmode() input
 # version 3.0.5 N Waterton 8th December 2025 rewrote async_art_remove_mats.py to support portait mat, fixed depreciation warnings, reworked upload logic, and added URL support (for upload)
+# version 3.0.6 E Leafe 19th february 2026 updated async_art.py with the url features added in 3.0.4
+# version 3.0.7 E Leafe 20th may 2026 corrected logging level in connection.py
+# version 3.0.8 E Leafe 20th may 2026 corrected logging level in remaining files
 
-__version__ = '3.0.5'
+__version__ = '3.0.8'

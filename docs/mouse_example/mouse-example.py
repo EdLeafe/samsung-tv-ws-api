@@ -10,7 +10,9 @@ from samsungtvws.remote import SamsungTVWS
 TV_IP = "192.168.0.X"
 
 if "X" in TV_IP:
-    raise ValueError("Please set the IP address of your TV in the TV_IP variable")
+    raise ValueError(
+        "Please set the IP address of your TV in the TV_IP variable"
+    )
 
 token_file = os.path.dirname(os.path.realpath(__file__)) + "/tv-token.txt"
 tv = SamsungTVWS(host=TV_IP, port=8002, token_file=token_file)
@@ -32,7 +34,9 @@ def send_click_to_tv(event):
 
 async def accept_client(websocket, path):
     print("New Web Client Connected")
-    await websocket.send("Connected To TV<br/>Drag the ball to move the TV cursor")
+    await websocket.send(
+        "Connected To TV<br/>Drag the ball to move the TV cursor"
+    )
     while True:
         msg = await websocket.recv()
         event = json.loads(msg)

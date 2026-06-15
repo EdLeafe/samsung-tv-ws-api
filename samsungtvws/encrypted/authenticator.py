@@ -147,7 +147,9 @@ def _generate_server_hello(user_id: str, pin: str) -> Dict[str, bytes]:
     iv = b"\x00" * BLOCK_SIZE
     cipher = Cipher(algorithms.AES(aes_key), modes.CBC(iv))
     encryptor: CipherContext = cipher.encryptor()
-    encrypted = encryptor.update(bytes.fromhex(PUBLIC_KEY)) + encryptor.finalize()
+    encrypted = (
+        encryptor.update(bytes.fromhex(PUBLIC_KEY)) + encryptor.finalize()
+    )
     LOGGER.debug("AES encrypted: %s", encrypted.hex())
 
     swapped = _encrypt_parameter_data_with_aes(encrypted)
@@ -192,7 +194,9 @@ def _parse_client_hello(
     userId = data[USER_ID_POS : userIdLen + USER_ID_POS]
     LOGGER.debug("userId: %s", userId.decode("utf-8"))
 
-    pEncWBGx = data[USER_ID_POS + userIdLen : GX_SIZE + USER_ID_POS + userIdLen]
+    pEncWBGx = data[
+        USER_ID_POS + userIdLen : GX_SIZE + USER_ID_POS + userIdLen
+    ]
     LOGGER.debug("pEncWBGx: %s", pEncWBGx.hex())
 
     pEncGx = _decrypt_parameter_data_with_aes(pEncWBGx)
@@ -213,9 +217,7 @@ def _parse_client_hello(
     LOGGER.debug("secret: %s", secret.hex())
 
     dataHash2 = data[
-        USER_ID_POS
-        + userIdLen
-        + GX_SIZE : USER_ID_POS
+        USER_ID_POS + userIdLen + GX_SIZE : USER_ID_POS
         + userIdLen
         + GX_SIZE
         + SHA_DIGEST_LENGTH
@@ -250,7 +252,11 @@ def _parse_client_hello(
     LOGGER.debug("dest_hash: %s", dest_hash.hex())
 
     finalBuffer = (
-        userId + user_id.encode("utf-8") + pGx + bytes.fromhex(PUBLIC_KEY) + secret
+        userId
+        + user_id.encode("utf-8")
+        + pGx
+        + bytes.fromhex(PUBLIC_KEY)
+        + secret
     )
     sha1 = hashlib.sha1()
     sha1.update(finalBuffer)
@@ -277,7 +283,9 @@ def _parse_client_acknowledge(client_ack: str, skprime: bytes) -> bool:
     sha1 = hashlib.sha1()
     sha1.update(skprime + b"\x02")
     skprime_hash = sha1.digest()
-    calculate_ack = "0104000000000000000014" + skprime_hash.hex().upper() + "0000000000"
+    calculate_ack = (
+        "0104000000000000000014" + skprime_hash.hex().upper() + "0000000000"
+    )
 
     return client_ack == calculate_ack
 
@@ -342,7 +350,9 @@ class SamsungTVEncryptedWSAsyncAuthenticator:
         async with self._web_session.get(url) as response:
             LOGGER.debug("Rx: %s", await response.text())
 
-    async def _second_step_of_pairing(self, pin: str) -> Optional[Dict[str, bytes]]:
+    async def _second_step_of_pairing(
+        self, pin: str
+    ) -> Optional[Dict[str, bytes]]:
         hello_output = _generate_server_hello(self.USER_ID, pin)
         if not hello_output:
             return None
@@ -370,7 +380,10 @@ class SamsungTVEncryptedWSAsyncAuthenticator:
         client_hello = output.group(2)
         # lastRequestId = int(requestId)
         return _parse_client_hello(
-            client_hello, hello_output["hash"], hello_output["AES_key"], self.USER_ID
+            client_hello,
+            hello_output["hash"],
+            hello_output["AES_key"],
+            self.USER_ID,
         )
 
     async def try_pin(self, pin: str) -> Optional[str]:

@@ -8,8 +8,8 @@ SPDX-License-Identifier: LGPL-3.0
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Union
 import warnings
+from typing import Any, Dict, List, Optional, Union
 
 from samsungtvws.event import ED_INSTALLED_APP_EVENT, parse_installed_app
 
@@ -17,6 +17,7 @@ from . import art, connection, helper, rest, shortcuts
 from .command import SamsungTVCommand, SamsungTVSleepCommand
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 REMOTE_ENDPOINT = "samsung.remote.control"
 
@@ -242,12 +243,16 @@ class SamsungTVWS(connection.SamsungTVWSConnection):
         year = self._get_rest_api().get_model_year()
         if not self.token:
             self.token = self._get_token()
-        if not self.token and year >= 24:   #initialize token now for 2024+ tv's
+        if (
+            not self.token and year >= 24
+        ):  # initialize token now for 2024+ tv's
             try:
                 self.open()
                 self.close()
             except Exception as e:
-                _LOGGING.debug('Unable to connect to {} - may be off?'.format(host))
+                _LOGGING.debug(
+                    "Unable to connect to {} - may be off?".format(host)
+                )
 
     def _ws_send(
         self,
@@ -307,7 +312,9 @@ class SamsungTVWS(connection.SamsungTVWSConnection):
             app_type,
             meta_tag,
         )
-        self._ws_send(ChannelEmitCommand.launch_app(app_id, app_type, meta_tag))
+        self._ws_send(
+            ChannelEmitCommand.launch_app(app_id, app_type, meta_tag)
+        )
 
     def open_browser(self, url: str) -> None:
         _LOGGING.debug("Opening url in browser %s", url)
@@ -336,9 +343,11 @@ class SamsungTVWS(connection.SamsungTVWSConnection):
 
     def _get_rest_api(self) -> rest.SamsungTVRest:
         if self._rest_api is None:
-            self._rest_api = rest.SamsungTVRest(self.host, self.port, self.timeout)
+            self._rest_api = rest.SamsungTVRest(
+                self.host, self.port, self.timeout
+            )
         return self._rest_api
-        
+
     def on(self) -> bool:
         return self._get_rest_api().rest_power_state()
 

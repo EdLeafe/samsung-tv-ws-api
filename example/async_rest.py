@@ -16,7 +16,9 @@ port = 8002
 async def main():
     async with aiohttp.ClientSession() as session:
         with contextlib.suppress(HttpApiError):
-            rest_api = SamsungTVAsyncRest(host=host, port=port, session=session)
+            rest_api = SamsungTVAsyncRest(
+                host=host, port=port, session=session
+            )
             logging.info(await rest_api.rest_device_info())
 
 

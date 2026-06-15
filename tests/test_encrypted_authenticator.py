@@ -1,17 +1,21 @@
 """SamsungTV Encrypted."""
 
 import aiohttp
-from aioresponses import aioresponses
 import pytest
+from aioresponses import aioresponses
 from yarl import URL
 
-from samsungtvws.encrypted.authenticator import SamsungTVEncryptedWSAsyncAuthenticator
+from samsungtvws.encrypted.authenticator import (
+    SamsungTVEncryptedWSAsyncAuthenticator,
+)
 
 
 @pytest.mark.asyncio
 async def test_authenticator(aioresponse: aioresponses) -> None:
     with open("tests/fixtures/auth_pin_status.xml") as file:
-        aioresponse.get("http://1.2.3.4:8080/ws/apps/CloudPINPage", body=file.read())
+        aioresponse.get(
+            "http://1.2.3.4:8080/ws/apps/CloudPINPage", body=file.read()
+        )
     with open("tests/fixtures/auth_pin_status.xml") as file:
         aioresponse.post(
             "http://1.2.3.4:8080/ws/apps/CloudPINPage",

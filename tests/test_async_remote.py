@@ -28,7 +28,9 @@ def create_future_with_result(result) -> asyncio.Future:
 ED_APPS_LAUNCH_FUTURE = create_future_with_result(ED_APPS_LAUNCH_SAMPLE)
 ED_EDENTV_UPDATE_FUTURE = create_future_with_result(ED_EDENTV_UPDATE_SAMPLE)
 ED_INSTALLED_APP_FUTURE = create_future_with_result(ED_INSTALLED_APP_SAMPLE)
-MS_CHANNEL_CONNECT_FUTURE = create_future_with_result(MS_CHANNEL_CONNECT_SAMPLE)
+MS_CHANNEL_CONNECT_FUTURE = create_future_with_result(
+    MS_CHANNEL_CONNECT_SAMPLE
+)
 MS_ERROR_EVENT_FUTURE = create_future_with_result(MS_ERROR_SAMPLE)
 MS_VOICEAPP_HIDE_FUTURE = create_future_with_result(MS_VOICEAPP_HIDE_SAMPLE)
 NONE_FUTURE = create_future_with_result(None)

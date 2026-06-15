@@ -11,7 +11,16 @@ import contextlib
 import json
 import logging
 from types import TracebackType
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
 from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import ConnectionClosed
@@ -22,12 +31,13 @@ from .command import SamsungTVCommand, SamsungTVSleepCommand
 from .event import (
     IGNORE_EVENTS_AT_STARTUP,
     MS_CHANNEL_CONNECT_EVENT,
+    MS_CHANNEL_TIMEOUT,
     MS_CHANNEL_UNAUTHORIZED,
-    MS_CHANNEL_TIMEOUT
 )
 from .helper import get_ssl_context
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 
 class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
@@ -56,7 +66,9 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         connect_kwargs: Dict[str, Any] = {}
         if self._is_ssl_connection():
             connect_kwargs["ssl"] = get_ssl_context()
-        connection = await connect(url, open_timeout=self.timeout, **connect_kwargs)
+        connection = await connect(
+            url, open_timeout=self.timeout, **connect_kwargs
+        )
 
         event: Optional[str] = None
         while event is None or event in IGNORE_EVENTS_AT_STARTUP:
@@ -74,7 +86,9 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
             # Unexpected event received during connection routine
             await self.close()
             if event == MS_CHANNEL_TIMEOUT:
-                _LOGGING.debug("connection not accepted on TV, or token missing/incorrect")
+                _LOGGING.debug(
+                    "connection not accepted on TV, or token missing/incorrect"
+                )
             raise exceptions.ConnectionFailure(response)
 
         self._check_for_token(response)
@@ -83,7 +97,10 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         return connection
 
     async def start_listening(
-        self, callback: Optional[Callable[[str, Any], Optional[Awaitable[None]]]] = None
+        self,
+        callback: Optional[
+            Callable[[str, Any], Optional[Awaitable[None]]]
+        ] = None,
     ) -> None:
         """Open, and start listening."""
         if not self._recv_loop:
@@ -133,14 +150,20 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         if not self.is_alive():
             self.connection = await self.open()
 
-        delay = self.key_press_delay if key_press_delay is None else key_press_delay
+        delay = (
+            self.key_press_delay
+            if key_press_delay is None
+            else key_press_delay
+        )
 
         for command in commands:
             await self._send_command(self.connection, command, delay)
 
     async def send_command(
         self,
-        command: Union[List[SamsungTVCommand], SamsungTVCommand, Dict[str, Any]],
+        command: Union[
+            List[SamsungTVCommand], SamsungTVCommand, Dict[str, Any]
+        ],
         key_press_delay: Optional[float] = None,
     ) -> None:
         if isinstance(command, list):
@@ -173,4 +196,7 @@ class SamsungTVWSAsyncConnection(connection.SamsungTVWSBaseConnection):
         await asyncio.sleep(delay)
 
     def is_alive(self) -> bool:
-        return self.connection is not None and self.connection.state is not State.CLOSED
+        return (
+            self.connection is not None
+            and self.connection.state is not State.CLOSED
+        )

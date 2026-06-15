@@ -3,16 +3,17 @@
 import asyncio
 from unittest.mock import Mock, patch
 
-from aioresponses import aioresponses
 import pytest
+from aioresponses import aioresponses
 from websockets.asyncio.client import ClientConnection
 
 
 @pytest.fixture(autouse=True)
 def override_time_sleep():
     """Ignore time sleep in tests."""
-    with patch("samsungtvws.connection.time.sleep"), patch(
-        "samsungtvws.remote.time.sleep"
+    with (
+        patch("samsungtvws.connection.time.sleep"),
+        patch("samsungtvws.remote.time.sleep"),
     ):
         yield
 
@@ -33,7 +34,9 @@ def override_asyncio_sleep():
     """Ignore asyncio sleep in tests."""
     sleep_future = asyncio.Future()
     sleep_future.set_result(None)
-    with patch("samsungtvws.async_connection.asyncio.sleep", return_value=sleep_future):
+    with patch(
+        "samsungtvws.async_connection.asyncio.sleep", return_value=sleep_future
+    ):
         yield
 
 

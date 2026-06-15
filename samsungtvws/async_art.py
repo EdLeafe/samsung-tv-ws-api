@@ -11,6 +11,7 @@ SPDX-License-Identifier: LGPL-3.0
 from datetime import datetime
 import json
 import logging
+from pathlib import Path
 import random
 from pathlib import Path
 import asyncio
@@ -28,8 +29,10 @@ from .async_rest import SamsungTVAsyncRest
 from .helper import get_ssl_context, is_true
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 ART_ENDPOINT = "com.samsung.art-app"
+CHUNK_SIZE = 64 * 1024  # 64K seems to work well
 
 
 class ArtChannelEmitCommand(SamsungTVCommand):
@@ -76,7 +79,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         self.pending_requests = {}
         self.callbacks = {}
         self.get_token()
-            
+
     def get_token(self):
         '''
         Open and close remote control websocket to get/check token
@@ -103,7 +106,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         if self.session:
             await self.session.close()
         await super().close()
-   
+
     async def start_listening(self) -> None:
         # Override base class to process events
         if not self.is_alive():
@@ -113,11 +116,11 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 await self.get_artmode()
             except AssertionError:
                 pass
-            
+
     def get_uuid(self):
         self.art_uuid = str(uuid.uuid4())
         return self.art_uuid
-        
+
     async def wait_for_response(self, request_uuid, timeout=2):
         data = None
         try:
@@ -148,11 +151,14 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         await self.start_listening()
         await self.send_command(ArtChannelEmitCommand.art_app_request(request_data))
         return await self.wait_for_response(wait_for_event or request_data["id"], timeout)
-        
+
     async def process_event(self, event=None, response=None):
+        # _LOGGING.debug("process_event: event=%s, pending=%s", event, list(self.pending_requests.keys()))
         if event == D2D_SERVICE_MESSAGE_EVENT:
             data = json.loads(response["data"])
             sub_event = data.get("event", "*")
+            request_id = data.get('request_id', data.get('id'))
+            # _LOGGING.debug("d2d message: sub_event=%s, request_id=%s", sub_event, request_id)
             if 'artmode_status' in sub_event:
                 # API 5.x may use 'status' instead of 'value'
                 self.art_mode = data.get('value', data.get('status', 'off')) == 'on'
@@ -162,12 +168,12 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 self.art_mode = False
             elif 'wakeup' in sub_event:
                 asyncio.create_task(self.get_artmode())
-                
+
             if sub_event in self.callbacks.keys():
                 awaitable = self.callbacks[sub_event](event, response)
                 if awaitable:
                     asyncio.create_task(awaitable)
-                
+
             request_id = data.get('request_id', data.get('id'))
             try:
                 if request_id in self.pending_requests.keys():
@@ -176,13 +182,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                     self.pending_requests[sub_event].set_result(response)
             except asyncio.exceptions.InvalidStateError:    #already completed
                 pass
-                
+
     def set_callback(self, trigger, callback=None):
         if not callback:
             self.callbacks.pop(trigger, None)
         else:
             self.callbacks[trigger] = callback
-            
+
     def get_session(self):
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession()
@@ -194,7 +200,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         if self._rest_api is None:
             self._rest_api = SamsungTVAsyncRest(host=self.host, port=self.port, session=self.session)
         return self._rest_api
-        
+
     async def _get_device_info(self):
         try:
             async with self.lock:
@@ -207,17 +213,17 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
     async def supported(self) -> bool:
         data = await self._get_device_info()
         return data.get("device", {}).get("FrameTVSupport") == "true"
-        
+
     async def on(self) -> bool:
         data = await self._get_device_info()
         return data.get("device", {}).get('PowerState', 'off') == 'on'
-        
+
     async def is_artmode(self) -> bool:
         return await self.on() and self.art_mode
-        
+
     async def in_artmode(self) -> bool:
         return await self.on() and await self.get_artmode() == 'on'
-        
+
     async def get_api_version(self):
         data = await self._send_art_request(
             {"request": "get_api_version"}
@@ -264,7 +270,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
-        
+
     async def get_artmode_settings(self, setting=''):
         '''
         setting can be any of 'brightness', 'color_temperature', 'motion_sensitivity',
@@ -283,7 +289,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
- 
+
     async def set_auto_rotation_status(self, duration=0, type=True, category=2):
         '''
         duration is "off" or "number" where number is duration in minutes. set 0 for 'off'
@@ -339,7 +345,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
         assert data
         return data
-        
+
     async def get_color_temperature(self):
         data = await self._send_art_request(
             {"request": "get_color_temperature"}
@@ -527,9 +533,15 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "matte_id": matte or "none",
                 "portrait_matte_id": portrait_matte or "none",
                 "file_size": file_size,
-            }
+            },
+            wait_for_event="ready_to_use",
+            timeout=timeout
         )
-        assert data
+        if not data:
+            _LOGGING.error("upload: send_image request timed out (no 'ready_to_use' response in %ss). "
+                           "listener_alive=%s, connection_alive=%s",
+                           timeout, self._recv_loop is not None and not self._recv_loop.done(), self.is_alive())
+            raise exceptions.ConnectionFailure("TV did not respond to send_image request")
         conn_info = json.loads(data["conn_info"])
         header = json.dumps(
             {
@@ -544,14 +556,13 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
         )
 
         ssl_context = get_ssl_context() if conn_info.get('secured', False) else None
-        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)  
+        reader, writer = await asyncio.open_connection(conn_info['ip'], int(conn_info['port']), ssl=ssl_context)
         writer.write(len(header).to_bytes(4, "big"))
         writer.write(header.encode("ascii"))
-        #writer.write(file)
         # Send the image contents in chunks
-        async for chunk in chunker(file):
+        async for chunk in chunker(image):
             writer.write(chunk)
-            await writer.drain()
+        await writer.drain()
         writer.close()
         data = await self.wait_for_response("image_added", timeout=timeout)
         return data["content_id"] if data else None
@@ -594,7 +605,7 @@ class SamsungTVAsyncArt(SamsungTVWSAsyncConnection):
                 "value": mode,
             }
         )
-        
+
     async def get_rotation(self):
         data = await self._send_art_request(
             {"request": "get_current_rotation"}

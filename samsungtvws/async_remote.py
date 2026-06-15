@@ -6,8 +6,9 @@ Copyright (C) 2019 DSR! <xchwarze@gmail.com>
 SPDX-License-Identifier: LGPL-3.0
 """
 
-from asyncio import Future, TimeoutError as AsyncioTimeoutError
 import logging
+from asyncio import Future
+from asyncio import TimeoutError as AsyncioTimeoutError
 from typing import Any, Dict, List, Optional, Set
 
 import async_timeout
@@ -16,6 +17,7 @@ from . import async_connection, remote, rest
 from .event import ED_INSTALLED_APP_EVENT, parse_installed_app
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 
 
 class SamsungTVWSAsyncRemote(async_connection.SamsungTVWSAsyncConnection):

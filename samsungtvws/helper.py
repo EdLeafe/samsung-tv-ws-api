@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional, Union
 from . import exceptions
 
 _LOGGING = logging.getLogger(__name__)
+_LOGGING.setLevel(logging.INFO)
 _SSL_CONTEXT: Optional[ssl.SSLContext] = None
 
 
@@ -43,6 +44,11 @@ def get_ssl_context() -> ssl.SSLContext:
         _SSL_CONTEXT.check_hostname = False
         _SSL_CONTEXT.verify_mode = ssl.CERT_NONE
     return _SSL_CONTEXT
-    
+
+
 def is_true(value):
-    return value.lower() in ["on", "true"] if isinstance(value, str) else value in [True, 1]
+    return (
+        value.lower() in ["on", "true"]
+        if isinstance(value, str)
+        else value in [True, 1]
+    )
